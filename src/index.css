@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.debt-review-container {
+  transform-origin: top left;
+}
+
+@media (max-width: 794px) {
+  .debt-review-container {
+    transform: scale(calc(100vw / 794));
+  }
+}
+
+@media print {
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  @page {
+    margin: 0.5cm;
+    size: A4;
+  }
+
+  .print\:shadow-none {
+    box-shadow: none !important;
+  }
+
+  .print\:rounded-none {
+    border-radius: 0 !important;
+  }
+
+  .print\:bg-white {
+    background-color: white !important;
+  }
+
+  .print\:bg-slate-50 {
+    background-color: #f8fafc !important;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+}

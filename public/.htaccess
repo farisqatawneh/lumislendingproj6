@@ -1,0 +1,26 @@
+Options -MultiViews
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Never rewrite real files/directories.
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Never rewrite static assets; return 404 if missing.
+  RewriteRule ^assets/ - [L]
+  RewriteCond %{REQUEST_URI} \.(js|mjs|css|map|json|png|jpe?g|gif|svg|webp|ico|woff2?|ttf)$ [NC]
+  RewriteRule ^ - [L]
+
+  # SPA fallback for client-side routes only.
+  RewriteRule . /index.html [L]
+</IfModule>
+
+<IfModule mod_mime.c>
+  AddType application/javascript .js .mjs
+  AddType text/css .css
+  AddType application/json .json .map
+  AddType image/svg+xml .svg
+</IfModule>
