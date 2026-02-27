@@ -1,53 +1,12 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Loader2, CheckCircle, XCircle, ArrowRight, ExternalLink, Shield } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, ArrowRight, ExternalLink } from 'lucide-react';
 import { LenderLogosAnimation } from '../components/LenderLogosAnimation';
 import evvoLogo from '../assets/evvo_financial_logo.jpg';
 
 const SUPABASE_BASE_URL = 'https://obupjgavowabowrshtmt.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idXBqZ2F2b3dhYm93cnNodG10Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzOTY0MzMsImV4cCI6MjA4NTk3MjQzM30.6M8_Q_wYnM1lUtwx3Gt7PZE3m6IAzqF5gc3WEJt26bE';
-
-interface LoanOffer {
-  id: string;
-  lender_name: string;
-  loan_amount: number;
-  apr: number;
-  term_months: number;
-  monthly_payment: number;
-  total_repayment: number;
-}
-
-interface EvvoOffer {
-  uuid: string;
-  originator: string;
-  originator_img_link: string;
-  originator_disclaimer: string;
-  term: string;
-  apr: string;
-  monthly: string;
-  loan_amnt: string;
-  loan_type: string;
-  pre_approved: number;
-  pre_qualified: number;
-  continue_link: string;
-}
-
-interface EvvoCustomTile {
-  id: number;
-  company_id: string;
-  tile_name: string;
-  offer_url: string;
-  tile_header: string;
-  tile_details: string;
-}
-
-interface EvvoOffersData {
-  customer_id: number;
-  uuid: string;
-  offers: EvvoOffer[];
-  custom_tiles: EvvoCustomTile[];
-}
 
 interface Application {
   id: string;
@@ -55,7 +14,7 @@ interface Application {
   financial_analysis_released_at: string | null;
   financial_document_url: string | null;
   offers_available: boolean;
-  evvo_offers_data: EvvoOffersData | null;
+  evvo_hash_id: string | null;
   client_email: string;
   client_phone: string;
   ssn: string;
@@ -85,7 +44,6 @@ export function ClientViewPage() {
   const { token } = useParams<{ token: string }>();
   const [loading, setLoading] = useState(true);
   const [application, setApplication] = useState<Application | null>(null);
-  const [offers, setOffers] = useState<LoanOffer[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [statusIndex, setStatusIndex] = useState(0);
   const initialLoadDone = useRef(false);
@@ -112,7 +70,7 @@ export function ClientViewPage() {
           financial_analysis_released_at,
           financial_document_url,
           offers_available,
-          evvo_offers_data,
+          evvo_hash_id,
           client_email,
           client_phone,
           ssn,
@@ -161,17 +119,6 @@ export function ClientViewPage() {
 
       if (appData.offers_released_at || appData.financial_analysis_released_at) {
         setConfirmed(true);
-      }
-
-      if (appData.offers_released_at) {
-        const { data: offersData, error: offersError } = await supabase
-          .from('loan_offers')
-          .select('*')
-          .eq('application_id', appData.id)
-          .order('apr', { ascending: true });
-
-        if (offersError) throw offersError;
-        setOffers(offersData || []);
       }
 
       initialLoadDone.current = true;
@@ -440,159 +387,31 @@ export function ClientViewPage() {
     );
   }
 
-  const evvoOffers = application.evvo_offers_data?.offers ?? [];
-  const evvoCustomTiles = application.evvo_offers_data?.custom_tiles ?? [];
-  const hasEvvoOffers = evvoOffers.length > 0;
-  const hasCustomTiles = evvoCustomTiles.length > 0;
-  const hasManualOffers = offers.length > 0;
-  const hasAnyOffers = hasEvvoOffers || hasManualOffers;
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-50 p-4">
       <div className="max-w-6xl mx-auto py-8">
 
-        {/* EVVO Offers */}
-        {hasEvvoOffers && (
-          <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+        {/* EVVO Offers Link */}
+        {application.evvo_hash_id ? (
+          <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
             <div className="flex items-center gap-3 mb-6">
               <CheckCircle className="w-8 h-8 text-green-500" />
               <div>
-                <h2 className="text-2xl font-black text-slate-900">Your Loan Offers</h2>
-                <p className="text-slate-600">We found {evvoOffers.length} offer{evvoOffers.length !== 1 ? 's' : ''} for you</p>
+                <h2 className="text-2xl font-black text-slate-900">Your Loan Offers Are Ready</h2>
+                <p className="text-slate-600">Click below to view your personalized loan offers</p>
               </div>
             </div>
-
-            <div className="space-y-4">
-              {evvoOffers.map((offer) => (
-                <div
-                  key={offer.uuid}
-                  className="border border-teal-200 rounded-xl p-6 hover:border-teal-400 hover:shadow-md transition-all"
-                >
-                  <div className="flex items-start gap-4">
-                    {offer.originator_img_link && (
-                      <img
-                        src={offer.originator_img_link}
-                        alt={offer.originator}
-                        className="w-20 h-20 rounded-xl object-contain bg-slate-50 p-2 flex-shrink-0 border border-slate-100"
-                      />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <h3 className="text-xl font-bold text-slate-900">{offer.originator}</h3>
-                          {offer.pre_approved === 1 && (
-                            <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
-                              <Shield className="w-3 h-3" />
-                              Pre-Approved
-                            </span>
-                          )}
-                          {offer.pre_qualified === 1 && (
-                            <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-full">
-                              <Shield className="w-3 h-3" />
-                              Pre-Qualified
-                            </span>
-                          )}
-                        </div>
-                        {offer.apr !== 'N/A' && (
-                          <div className="text-right">
-                            <div className="text-2xl font-black text-teal-700">{offer.apr}</div>
-                            <div className="text-xs text-slate-500">APR</div>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-3 border-t border-slate-100">
-                        <div>
-                          <div className="text-sm text-slate-500">Loan Amount</div>
-                          <div className="text-lg font-bold text-slate-900">{offer.loan_amnt}</div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-slate-500">Monthly Payment</div>
-                          <div className="text-lg font-bold text-slate-900">{offer.monthly}</div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-slate-500">Term</div>
-                          <div className="text-lg font-bold text-slate-900">{offer.term}</div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-slate-500">Type</div>
-                          <div className="text-lg font-bold text-slate-900 capitalize">{offer.loan_type}</div>
-                        </div>
-                      </div>
-
-                      {offer.continue_link && (
-                        <div className="mt-4">
-                          <a
-                            href={offer.continue_link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-lg transition-colors shadow-md"
-                          >
-                            Continue with {offer.originator}
-                            <ExternalLink className="w-4 h-4" />
-                          </a>
-                        </div>
-                      )}
-
-                      {offer.originator_disclaimer && (
-                        <p className="text-xs text-slate-400 mt-3 italic">{offer.originator_disclaimer}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <a
+              href={application.evvo_hash_id}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-3 px-8 py-4 bg-teal-600 hover:bg-teal-700 text-white font-bold text-lg rounded-xl transition-colors shadow-lg hover:shadow-xl"
+            >
+              View Your Offers
+              <ExternalLink className="w-5 h-5" />
+            </a>
           </div>
-        )}
-
-        {/* Manual Offers (backward compatible) */}
-        {hasManualOffers && (
-          <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
-            <div className="flex items-center gap-3 mb-6">
-              <CheckCircle className="w-8 h-8 text-green-500" />
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">{hasEvvoOffers ? 'Additional Offers' : 'Your Loan Offers'}</h2>
-                <p className="text-slate-600">We found {offers.length} offer{offers.length !== 1 ? 's' : ''} for you</p>
-              </div>
-            </div>
-            <div className="space-y-4">
-              {offers.map((offer) => (
-                <div
-                  key={offer.id}
-                  className="border border-teal-200 rounded-xl p-6 hover:border-teal-400 transition-colors"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h3 className="text-xl font-bold text-slate-900">{offer.lender_name}</h3>
-                      <p className="text-sm text-slate-600">Loan Amount: ${offer.loan_amount.toLocaleString()}</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-black text-teal-700">{offer.apr}%</div>
-                      <div className="text-sm text-slate-600">APR</div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-200">
-                    <div>
-                      <div className="text-sm text-slate-600">Monthly Payment</div>
-                      <div className="text-lg font-bold text-slate-900">${offer.monthly_payment.toLocaleString()}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-slate-600">Term</div>
-                      <div className="text-lg font-bold text-slate-900">{offer.term_months} months</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-slate-600">Total Repayment</div>
-                      <div className="text-lg font-bold text-slate-900">${offer.total_repayment.toLocaleString()}</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* No offers at all */}
-        {!hasAnyOffers && (
+        ) : (
           <div className="bg-gradient-to-br from-red-50 to-rose-50 border-2 border-red-200 rounded-2xl shadow-xl p-8 mb-6">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0 bg-red-100 rounded-full p-3">
@@ -602,39 +421,6 @@ export function ClientViewPage() {
                 <h2 className="text-2xl font-black text-red-900 mb-2">No Offers Available</h2>
                 <p className="text-red-800 text-lg">Unfortunately, we were unable to find any loan offers that match your current financial profile at this time.</p>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* EVVO Custom Tiles */}
-        {hasCustomTiles && (
-          <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
-            <h2 className="text-2xl font-black text-slate-900 mb-2">Explore More Options</h2>
-            <p className="text-slate-600 mb-6">Additional financial services that may help you</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {evvoCustomTiles.map((tile) => (
-                <div
-                  key={tile.id}
-                  className="border border-slate-200 rounded-xl p-6 hover:border-teal-300 hover:shadow-md transition-all"
-                >
-                  <h3 className="text-lg font-bold text-slate-900 mb-3">{tile.tile_header}</h3>
-                  <div
-                    className="text-sm text-slate-600 mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_li]:mb-1"
-                    dangerouslySetInnerHTML={{ __html: tile.tile_details }}
-                  />
-                  {tile.offer_url && (
-                    <a
-                      href={tile.offer_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg transition-colors"
-                    >
-                      Learn More
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
-                  )}
-                </div>
-              ))}
             </div>
           </div>
         )}

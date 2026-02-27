@@ -6,6 +6,7 @@ interface Rep {
   id: string;
   email: string;
   full_name: string;
+  evvo_email: string | null;
 }
 
 interface AuthContextType {
@@ -53,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data, error } = await supabase
         .from('reps')
-        .select('id, email, full_name')
+        .select('id, email, full_name, evvo_email')
         .eq('id', userId)
         .maybeSingle();
 

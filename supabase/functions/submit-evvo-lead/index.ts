@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,6 +8,7 @@ const corsHeaders = {
 };
 
 interface SubmitEvvoPayload {
+  rep_id?: string;
   client_id?: string;
   client_name: string;
   client_email: string;
@@ -69,61 +71,66 @@ function mapPropertyStatus(value: string | undefined) {
 function mapPurpose(value: string | undefined) {
   if (!value) return "";
   const map: Record<string, string> = {
-    auto: "Auto",
-    business: "Business",
-    cosmetic: "Cosmetic",
-    credit_card_refinance: "Credit Card Refinance",
-    debt_consolidation: "Debt Consolidation",
-    emergency: "Emergency",
-    green: "Green",
-    home_improvement: "Home Improvement",
-    household_expenses: "Household Expenses",
-    large_purchases: "Large Purchases",
-    life_event: "Life Event",
-    medical_dental: "Medical / Dental",
-    moving_relocation: "Moving / Relocation",
-    student_loan_refinance: "Student Loan Refinance",
-    taxes: "Taxes",
-    vacation: "Vacation",
+    auto: "auto",
+    business: "business",
+    cosmetic: "cosmetic",
+    credit_card_refinance: "credit_card_refi",
+    credit_card_refi: "credit_card_refi",
+    debt_consolidation: "debt_consolidation",
+    emergency: "emergency",
+    green: "green",
+    home_improvement: "home_improvement",
+    household_expenses: "household_expenses",
+    large_purchases: "large_purchases",
+    life_event: "life_event",
+    medical_dental: "medical_dental",
+    moving_relocation: "moving_relocation",
+    student_loan_refinance: "student_loan_refi",
+    student_loan_refi: "student_loan_refi",
+    taxes: "taxes",
+    vacation: "vacation",
   };
-  return map[value] ?? value;
+  return map[value] ?? "";
 }
 
 function mapCreditRating(value: string | undefined) {
   if (!value) return "";
   const map: Record<string, string> = {
-    excellent: "Excellent",
-    good: "Good",
-    fair: "Fair",
-    low: "Low",
+    excellent: "excellent",
+    good: "good",
+    fair: "fair",
+    poor: "poor",
+    low: "poor",
   };
-  return map[value] ?? value;
+  return map[value] ?? "";
 }
 
 function mapEmploymentStatus(value: string | undefined) {
   if (!value) return "";
   const map: Record<string, string> = {
-    employed: "Employed",
-    military: "Military",
-    not_employed: "Not Employed",
-    retired: "Retired",
-    self_employed: "Self Employed",
-    student: "Student",
-    pension: "Pension",
-    disability: "Disability",
+    employed: "employed",
+    military: "military",
+    not_employed: "not_employed",
+    retired: "retired",
+    self_employed: "self_employed",
+    student: "student",
+    pension: "pension",
+    disability: "disability",
   };
-  return map[value] ?? value;
+  return map[value] ?? "";
 }
 
 function mapPayFrequency(value: string | undefined) {
   if (!value) return "";
   const map: Record<string, string> = {
-    weekly: "Weekly",
-    biweekly: "Biweekly",
-    twice_per_month: "Twice per month",
-    once_per_month: "Once per month",
+    weekly: "weekly",
+    biweekly: "biweekly",
+    twice_per_month: "twice_monthly",
+    twice_monthly: "twice_monthly",
+    once_per_month: "monthly",
+    monthly: "monthly",
   };
-  return map[value] ?? value;
+  return map[value] ?? "";
 }
 
 function mapEducationLevel(value: string | undefined) {
@@ -141,7 +148,7 @@ function mapEducationLevel(value: string | undefined) {
     other_grad_degree: "other_grad_degree",
     other: "other",
   };
-  return map[normalized] ?? "other";
+  return map[normalized] ?? "";
 }
 
 function splitAddressAndUnit(streetAddress: string) {
@@ -180,16 +187,36 @@ Deno.serve(async (req: Request) => {
     }
 
     const payload: SubmitEvvoPayload = await req.json();
-    const evvoEmail = Deno.env.get("EVVO_EMAIL");
-    const evvoPassword = Deno.env.get("EVVO_PASSWORD");
-    const defaultEvvoAgentEmail = Deno.env.get("EVVO_AGENT_EMAIL") ?? evvoEmail ?? "";
     const evvoSource = Deno.env.get("EVVO_SOURCE") ?? "Salesforce";
+
+    let evvoEmail = Deno.env.get("EVVO_EMAIL") ?? "";
+    let evvoPassword = Deno.env.get("EVVO_PASSWORD") ?? "";
+
+    if (payload.rep_id) {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL");
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      if (supabaseUrl && serviceRoleKey) {
+        const adminClient = createClient(supabaseUrl, serviceRoleKey);
+        const { data: repData } = await adminClient
+          .from("reps")
+          .select("evvo_email, evvo_password")
+          .eq("id", payload.rep_id)
+          .single();
+
+        if (repData?.evvo_email && repData?.evvo_password) {
+          evvoEmail = repData.evvo_email;
+          evvoPassword = repData.evvo_password;
+        }
+      }
+    }
+
+    const defaultEvvoAgentEmail = evvoEmail;
 
     if (!evvoEmail || !evvoPassword) {
       return new Response(
-        JSON.stringify({ error: "EVVO_EMAIL and EVVO_PASSWORD secrets are required" }),
+        JSON.stringify({ error: "EVVO credentials not configured. Go to Dashboard → EVVO Settings to set up your EVVO account." }),
         {
-          status: 500,
+          status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
@@ -268,7 +295,7 @@ Deno.serve(async (req: Request) => {
       unit: unit,
       city: payload.city,
       state: payload.state,
-      zip: payload.zip,
+      zip: digitsOnly(payload.zip).slice(0, 5).padStart(5, "0"),
       country: "United States",
       ssn: digitsOnly(payload.ssn),
       purpose: mapPurpose(toStringOrUndefined(payload.loan_purpose)),
