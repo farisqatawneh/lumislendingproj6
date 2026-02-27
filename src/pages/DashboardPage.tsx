@@ -6,8 +6,6 @@ import { useNavigate } from 'react-router-dom';
 import lumisLogo from '../assets/Lumis_Lending_Logo-removebg-preview.png';
 
 const ADMIN_EMAIL = 'george@lumislending.com';
-const SUPABASE_BASE_URL = 'https://obupjgavowabowrshtmt.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9idXBqZ2F2b3dhYm93cnNodG10Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzOTY0MzMsImV4cCI6MjA4NTk3MjQzM30.6M8_Q_wYnM1lUtwx3Gt7PZE3m6IAzqF5gc3WEJt26bE';
 
 interface RepUser {
   id: string;
@@ -104,25 +102,16 @@ export function DashboardPage() {
 
     setCreatingRep(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`${SUPABASE_BASE_URL}/functions/v1/create-rep`, {
-        method: 'POST',
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${session?.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('create-rep', {
+        body: {
           email: newRepEmail.trim(),
           password: newRepPassword.trim(),
           full_name: newRepName.trim(),
-        }),
+        },
       });
 
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data?.success) {
-        throw new Error(data?.error || 'Failed to create rep account');
-      }
+      if (error) throw new Error(error.message || 'Failed to create rep account');
+      if (!data?.success) throw new Error(data?.error || 'Failed to create rep account');
 
       alert(`Account created for ${newRepEmail.trim()}`);
       setNewRepEmail('');
@@ -132,7 +121,12 @@ export function DashboardPage() {
       loadReps();
     } catch (err) {
       console.error('Error creating rep:', err);
-      alert(err instanceof Error ? err.message : 'Failed to create account');
+      const msg = err instanceof Error ? err.message : 'Failed to create account';
+      if (msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network')) {
+        alert(`${msg}\n\nIf the create-rep function is not deployed, run:\nsupabase functions deploy create-rep`);
+      } else {
+        alert(msg);
+      }
     } finally {
       setCreatingRep(false);
     }
