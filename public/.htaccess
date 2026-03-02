@@ -2,7 +2,8 @@ Options -MultiViews
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteBase /
+  # Use /client/ when app is in /client/ subdirectory (cPanel); use / when at root
+  RewriteBase /client/
 
   # Never rewrite real files/directories.
   RewriteCond %{REQUEST_FILENAME} -f [OR]
