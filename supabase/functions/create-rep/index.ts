@@ -33,20 +33,25 @@ Deno.serve(async (req: Request) => {
     }
 
     const authHeader = req.headers.get("Authorization") ?? "";
-    const anonKey = req.headers.get("apikey") ?? "";
-    const callerClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const { data: { user: caller }, error: authError } = await callerClient.auth.getUser();
-    if (authError || !caller) {
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+    if (!token) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
+        JSON.stringify({ error: "Missing authorization token" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (caller.email !== ADMIN_EMAIL) {
+    const anonKey = req.headers.get("apikey") ?? "";
+    const callerClient = createClient(supabaseUrl, anonKey);
+    const { data: { user: caller }, error: authError } = await callerClient.auth.getUser(token);
+    if (authError || !caller) {
+      return new Response(
+        JSON.stringify({ error: authError?.message ?? "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (caller.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
       return new Response(
         JSON.stringify({ error: "Only the admin can create accounts" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }

@@ -110,7 +110,17 @@ export function DashboardPage() {
         },
       });
 
-      if (error) throw new Error(error.message || 'Failed to create rep account');
+      if (error) {
+        let errMsg = error.message;
+        try {
+          const ctx = (error as { context?: { json?: () => Promise<{ error?: string }> } }).context;
+          if (ctx?.json) {
+            const body = await ctx.json();
+            if (body?.error) errMsg = body.error;
+          }
+        } catch (_) {}
+        throw new Error(errMsg || 'Failed to create rep account');
+      }
       if (!data?.success) throw new Error(data?.error || 'Failed to create rep account');
 
       alert(`Account created for ${newRepEmail.trim()}`);

@@ -425,7 +425,7 @@ export function ClientViewPage() {
           </div>
         )}
 
-        {/* Financial Analysis / Pay Your Debt Faster */}
+        {/* Financial Analysis */}
         {application.financial_analysis_released_at && (
           <div className="relative overflow-hidden bg-gradient-to-br from-teal-600 via-cyan-600 to-blue-700 rounded-3xl shadow-2xl p-12 mb-6">
             <div className="absolute inset-0 opacity-20">
@@ -440,7 +440,7 @@ export function ClientViewPage() {
 
             <div className="relative z-10 flex flex-col items-center text-center">
               <h2 className="text-4xl md:text-5xl font-black text-white mb-4 drop-shadow-lg">
-                Pay Your Debt Faster
+                Financial Analysis
               </h2>
 
               <button
