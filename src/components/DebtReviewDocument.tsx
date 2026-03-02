@@ -697,7 +697,7 @@ export const DebtReviewDocument: React.FC<DebtReviewDocumentProps> = ({ review, 
                   <div className="p-2 md:p-4 flex flex-col items-center justify-center bg-green-50">
                     <p className="text-xs md:text-sm font-semibold text-green-700 mb-2">Total Cost</p>
                     <p className="text-sm md:text-xl font-black text-green-900">
-                      {formatCurrency(totalDebt)}
+                      {formatCurrency(review.program_estimated_total_payoff ?? totalDebt)}
                     </p>
                   </div>
                 </div>

@@ -82,12 +82,25 @@ Thank you,`;
             to: [{ email: payload.to }],
           },
         ],
-        from: { email: "support@lumislending.com" },
+        from: {
+          email: "support@lumislending.com",
+          name: "Lumis Lending",
+        },
         subject: "Complete Your Loan Application",
         content: [
           {
             type: "text/plain",
             value: message,
+          },
+          {
+            type: "text/html",
+            value: `
+<p>Hello ${firstName},</p>
+<p>Complete your loan application now.</p>
+<p>You can access it using the link below: <a href="${payload.client_link}">[link]</a></p>
+<p>If you have any questions after reviewing it, please don't hesitate to reach out.</p>
+<p>Thank you,</p>
+            `.trim(),
           },
         ],
       }),

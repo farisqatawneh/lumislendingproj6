@@ -339,6 +339,9 @@ export function ApplicationForm() {
           education_level: educationLevel || null,
           property_status: propertyStatus || null,
           crm_data: crmData,
+          // Explicit program cost for document generation - use this for "Resolution Program Total Cost", NOT total debt
+          program_cost: crmData.program_estimated_total_payoff ?? null,
+          total_debt: crmData.debt_items?.reduce((sum: number, i: { balance?: number }) => sum + (i.balance ?? 0), 0) ?? 0,
         }),
       });
 
